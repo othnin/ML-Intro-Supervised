@@ -25,8 +25,10 @@ def startupLoad():
     parser.add_argument('-cart', help="Run Decision Tree Classifier", action="store_true")
     parser.add_argument('-nb', help="Run Gaussian NB", action="store_true")
     parser.add_argument('-svc', help="Run SVC", action='store_true')
+    parser.add_argument('-s', help='Save to file', action='store_true')
     args = parser.parse_args()
     algList = []
+    saveFile = False
     if args.lr:
         algList += ['LR']
     if args.lda:
@@ -42,15 +44,26 @@ def startupLoad():
     if len(algList) == 0:
         print "At least one algorithm is required"
         sys.exit()
-    return args.webSite, algList
+    if args.s:
+        saveFile = True
+    return args.webSite, algList, saveFile
     
 if __name__ == "__main__":
     
     
     
     cmdArgs = startupLoad()
-    print (cmdArgs)
     url = cmdArgs[0]
+    saveToFile = cmdArgs[2]
+    
+    if saveToFile:
+        try:
+            file = open("analysisOut.txt", "w")
+        except IOError as e:
+            print("I/O Error({0}: {1}".format(e.errno, e.strerror))
+        except:
+            print("Unexpected error", sys.exc_info()[0])
+            
     # Load dataset
     #url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     names = ['sepal-length', 'sepal-width', 'petal-length', 'petal-width', 'class']
@@ -58,34 +71,59 @@ if __name__ == "__main__":
     
     
     # shape
-    print "Dataset shape"
-    print(dataset.shape)
+    if saveToFile:
+        file.write("Dataset shape: ")
+        file.write(str(dataset.shape) + "\n")
+    else:
+        print "Dataset shape"
+        print(dataset.shape)
     
     # head
-    print "First 20 colums of data"
-    print(dataset.head(20))
+    if saveToFile:
+        file.write("First 20 colums of data\n")
+        file.write(str(dataset.head(20)))
+    else:
+        print "First 20 colums of data"
+        print(dataset.head(20))
     
     # descriptions
-    print "Statistical measures of data"
-    print(dataset.describe())
+    if saveToFile:
+        file.write("\nStatistical measures of data\n")
+        file.write(str(dataset.describe()))
+    else:
+        print "Statistical measures of data"
+        print(dataset.describe())
     
     # class distribution
-    print "Number of instances of each class"
-    print(dataset.groupby('class').size())
+    if saveToFile:
+        file.write("Number of instances of each class\n")
+        file.write(str(dataset.groupby('class').size()))
+    else:
+        print "Number of instances of each class"
+        print(dataset.groupby('class').size())
     
     # box and whisker plots
     dataset.plot(kind='box', title="Univariate plots", subplots=True, layout=(2,2), sharex=False, sharey=False)
-    plt.show()
+    if saveToFile:
+        plt.savefig("UnivariatePlot.png")
+    else:
+        plt.show()
     
     # histograms
     dataset.hist()
     plt.suptitle("Histogram")
-    plt.show()
+    if saveToFile:
+        plt.savefig("Histogram.png")
+    else:
+        plt.show()
     
     # scatter plot matrix
     scatter_matrix(dataset)
     plt.suptitle("Multivariate Plots")
-    plt.show()
+    if saveToFile:
+        plt.savefig("MultivariatePlots.png")
+    else:
+        plt.show()
     
     # Split-out validation dataset
     array = dataset.values
@@ -147,7 +185,10 @@ if __name__ == "__main__":
         results.append(cv_results)
         names.append(name)
         msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
-        print(msg)
+        if saveToFile:
+            file.write(msg)
+        else:
+            print(msg)
       
     # Compare Algorithms
     fig = plt.figure()
@@ -155,26 +196,48 @@ if __name__ == "__main__":
     ax = fig.add_subplot(111)
     plt.boxplot(results)
     ax.set_xticklabels(names)
-    plt.show()
+    if saveToFile:
+        plt.savefig("AlgorithmComparison.png")
+    else:
+        plt.show()
     
     for name, model in models:
         alg = model
         alg.fit(X_train, Y_train)
         predictions = alg.predict(X_validation)
-        print("Name: %s" % name)
-        print("Accuracy report: %.2f" % accuracy_score(Y_validation, predictions))
-        print("Confusion matrix: ")
-        print(confusion_matrix(Y_validation, predictions))
-        print("Classification report: ")
-        print(classification_report(Y_validation, predictions))
+        if saveToFile:
+            file.write("Name: %s" % name)
+            file.write("Accuracy report: %.2f\n" % accuracy_score(Y_validation, predictions))
+            file.write("Confusion matrix: \n")
+            file.write(str(confusion_matrix(Y_validation, predictions)))
+            file.write("\nClassification report: \n")
+            file.write(str(classification_report(Y_validation, predictions)))
+        else:
+            print("Name: %s" % name)
+            print("Accuracy report: %.2f" % accuracy_score(Y_validation, predictions))
+            print("Confusion matrix: ")
+            print(confusion_matrix(Y_validation, predictions))
+            print("Classification report: ")
+            print(classification_report(Y_validation, predictions))
         
     # Make predictions on validation dataset
     knn = KNeighborsClassifier()
     knn.fit(X_train, Y_train)
     predictions = knn.predict(X_validation)
-    print("---KNNeighbors is the best fit for iris data---")
-    print("Accuracy report: %.2f" % accuracy_score(Y_validation, predictions))
-    print("Confusion matrix: ")
-    print(confusion_matrix(Y_validation, predictions))
-    print("Classification report: ")
-    print(classification_report(Y_validation, predictions))
+    if saveToFile:
+        file.write("---KNNeighbors is the best fit for iris data---\n")
+        file.write("Accuracy report: %.2f\n" % accuracy_score(Y_validation, predictions))
+        file.write("Confusion matrix: \n")
+        file.write(str(confusion_matrix(Y_validation, predictions)))
+        file.write("\nClassification report: \n")
+        file.write(str(classification_report(Y_validation, predictions)))
+    else:
+        print("---KNNeighbors is the best fit for iris data---")
+        print("Accuracy report: %.2f" % accuracy_score(Y_validation, predictions))
+        print("Confusion matrix: ")
+        print(confusion_matrix(Y_validation, predictions))
+        print("Classification report: ")
+        print(classification_report(Y_validation, predictions))
+       
+    file.close()
+        
